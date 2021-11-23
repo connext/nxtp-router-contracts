@@ -40,10 +40,22 @@ const config: HardhatUserConfig = {
     bob: { default: 2 },
     rando: { default: 3 },
   },
+  external: {
+    contracts: [
+      {
+        artifacts: "node_modules/@connext/nxtp-contracts/artifacts",
+        deploy: "node_modules/@connext/nxtp-contracts/deploy",
+      },
+    ],
+    deployments: {
+      rinkeby: ["node_modules/@connext/nxtp-contracts/deployments.json"],
+    },
+  },
   networks: {
     localhost: {
       accounts: {
-        accountsBalance: "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        accountsBalance:
+          "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         mnemonic,
       },
       chainId,
@@ -63,23 +75,35 @@ const config: HardhatUserConfig = {
     mainnet: {
       accounts: { mnemonic },
       chainId: 1,
-      url: urlOverride || process.env.ETH_PROVIDER_URL || "https://cloudflare-eth.com",
+      url:
+        urlOverride ||
+        process.env.ETH_PROVIDER_URL ||
+        "https://cloudflare-eth.com",
       gasPrice: 10000000000,
     },
     ropsten: {
       accounts: { mnemonic },
       chainId: 3,
-      url: urlOverride || process.env.ROPSTEN_ETH_PROVIDER_URL || "http://localhost:8545",
+      url:
+        urlOverride ||
+        process.env.ROPSTEN_ETH_PROVIDER_URL ||
+        "http://localhost:8545",
     },
     rinkeby: {
       accounts: { mnemonic },
       chainId: 4,
-      url: urlOverride || process.env.RINKEBY_ETH_PROVIDER_URL || "http://localhost:8545",
+      url:
+        urlOverride ||
+        process.env.RINKEBY_ETH_PROVIDER_URL ||
+        "http://localhost:8545",
     },
     goerli: {
       accounts: { mnemonic },
       chainId: 5,
-      url: urlOverride || process.env.GOERLI_ETH_PROVIDER_URL || "http://localhost:8545",
+      url:
+        urlOverride ||
+        process.env.GOERLI_ETH_PROVIDER_URL ||
+        "http://localhost:8545",
     },
     optimism: {
       accounts: { mnemonic },
@@ -89,7 +113,10 @@ const config: HardhatUserConfig = {
     kovan: {
       accounts: { mnemonic },
       chainId: 42,
-      url: urlOverride || process.env.KOVAN_ETH_PROVIDER_URL || "http://localhost:8545",
+      url:
+        urlOverride ||
+        process.env.KOVAN_ETH_PROVIDER_URL ||
+        "http://localhost:8545",
     },
     "optimism-kovan": {
       accounts: { mnemonic },
@@ -99,7 +126,10 @@ const config: HardhatUserConfig = {
     bsc: {
       accounts: { mnemonic },
       chainId: 56,
-      url: urlOverride || process.env.BSC_PROVIDER_URL || "https://bsc-dataseed.binance.org/",
+      url:
+        urlOverride ||
+        process.env.BSC_PROVIDER_URL ||
+        "https://bsc-dataseed.binance.org/",
     },
     chapel: {
       accounts: { mnemonic },
@@ -109,17 +139,26 @@ const config: HardhatUserConfig = {
     xdai: {
       accounts: { mnemonic },
       chainId: 100,
-      url: urlOverride || process.env.XDAI_PROVIDER_URL || "https://xdai.poanetwork.dev/",
+      url:
+        urlOverride ||
+        process.env.XDAI_PROVIDER_URL ||
+        "https://xdai.poanetwork.dev/",
     },
     matic: {
       accounts: { mnemonic },
       chainId: 137,
-      url: urlOverride || process.env.MATIC_PROVIDER_URL || "https://polygon-rpc.com",
+      url:
+        urlOverride ||
+        process.env.MATIC_PROVIDER_URL ||
+        "https://polygon-rpc.com",
     },
     ftm: {
       accounts: { mnemonic },
       chainId: 250,
-      url: urlOverride || process.env.FTM_PROVIDER_URL || "https://rpcapi.fantom.network/",
+      url:
+        urlOverride ||
+        process.env.FTM_PROVIDER_URL ||
+        "https://rpcapi.fantom.network/",
     },
     moonriver: {
       accounts: { mnemonic },
@@ -155,7 +194,10 @@ const config: HardhatUserConfig = {
     "arbitrum-rinkeby": {
       accounts: { mnemonic },
       chainId: 421611,
-      url: urlOverride || process.env.ARB_RINK_ETH_PROVIDER_URL || "https://rinkeby.arbitrum.io/rpc",
+      url:
+        urlOverride ||
+        process.env.ARB_RINK_ETH_PROVIDER_URL ||
+        "https://rinkeby.arbitrum.io/rpc",
     },
   },
 };

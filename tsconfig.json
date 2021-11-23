@@ -1,41 +1,16 @@
 {
   "compilerOptions": {
-    "moduleResolution": "node",
-    // These are helpful for developer experience.
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    // We want to be as strict as we can...
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitReturns": true,
-    "strict": true,
+    "target": "es2018",
     "module": "commonjs",
-    "target": "es2019",
-    "lib": ["es2019"],
-    "outDir": "dist",
-    "typeRoots": ["./typechain", "./node_modules/@types"],
-    "rootDir": ".",
-    "composite": true,
-    "tsBuildInfoFile": "./tsconfig.tsBuildInfo",
-    "types": ["node", "mocha", "chai"]
+    "strict": true,
+    "esModuleInterop": true,
+    "outDir": "dist"
   },
   "include": [
     "hardhat.config.ts",
     "./scripts",
     "./deploy",
-    "./typechain",
-    "src/**/*.ts",
-    "./artifacts",
-    "./deployments.json"
-  ],
-  "exclude": ["test/**/*.ts"],
-  "references": [
-    {
-      "path": "../utils/tsconfig.build.json"
-    }
+    "./test",
+    "typechain/**/*"
   ]
 }

@@ -7,9 +7,11 @@ import "./Router.sol";
 
 contract RouterFactory is IRouterFactory {
 
-  ITransactionManager public immutable transactionManager;
+  ITransactionManager public transactionManager;
 
-  constructor(address _transactionManager) {
+  constructor() {}
+
+  function init(address _transactionManager) public {
     transactionManager = ITransactionManager(_transactionManager);
   }
 
