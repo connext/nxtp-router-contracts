@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.4;
 
-import "./interfaces/ITransactionManager.sol";
-import "./lib/LibAsset.sol";
+import "@connext/nxtp-contracts/contracts/interfaces/ITransactionManager.sol";
+import "@connext/nxtp-contracts/contracts/lib/LibAsset.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Router is Ownable {

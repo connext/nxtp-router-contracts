@@ -2,7 +2,7 @@
 pragma solidity 0.8.4;
 
 import "./interfaces/IRouterFactory.sol";
-import "./interfaces/ITransactionManager.sol";
+import "@connext/nxtp-contracts/contracts/interfaces/ITransactionManager.sol";
 import "./Router.sol";
 
 contract RouterFactory is IRouterFactory {
