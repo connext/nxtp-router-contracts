@@ -18,13 +18,14 @@ const setupTest = deployments.createFixture(
     txManager = await factory.deploy(1337) as TransactionManager;
     console.log("txManager: ", txManager.address);
 
-    const { deployer, alice } = await getNamedAccounts();
+    const { deployer, alice, bob } = await getNamedAccounts();
 
     const routerFactory = await ethers.getContractFactory("Router", deployer);
     router = (await routerFactory.deploy(
       txManager.address,
       alice,
       deployer
+      bob,
     )) as Router;
     const txM = await router.transactionManager();
     console.log("txM: ", txM);
@@ -39,7 +40,7 @@ const setupTest = deployments.createFixture(
   }
 );
 
-describe("TransactionManager", function () {
+describe("Router", function () {
   const [deployer] = waffle.provider.getWallets() as Wallet[];
 
   beforeEach(async () => {
@@ -54,7 +55,7 @@ describe("TransactionManager", function () {
     expect(liq.toString()).to.eq(amt.toString());
   });
 
-  it("should prepare tx", async () => {
+  it("should prepare tx with the correct sig", async () => {
     
   })
 });

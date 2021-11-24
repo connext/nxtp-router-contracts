@@ -15,17 +15,18 @@ contract RouterFactory is IRouterFactory {
     transactionManager = ITransactionManager(_transactionManager);
   }
 
-  function createRouter(address recipient) override external returns (address) {
-    Router router = new Router(address(transactionManager), recipient, msg.sender);
+  function createRouter(address signer, address recipient) override external returns (address) {
+    Router router = new Router(address(transactionManager), signer, recipient, msg.sender);
     emit RouterCreated(address(router));
     return address(router);
   }
 
-  function createRouterAndAddLiquidity(address recipient, address assetId, uint256 amount) external payable returns (address) {
-    Router router = Router(this.createRouter(recipient));
+  function createRouterAndAddLiquidity(address signer, address recipient, address assetId, uint256 amount, bytes calldata signature) external payable returns (address) {
+    Router router = Router(this.createRouter(signer, recipient));
     router.addLiquidity{value: LibAsset.isNativeAsset(assetId) ? amount : 0 }(
       amount,
-      assetId
+      assetId,
+      signature
     );
     return address(router);
   }

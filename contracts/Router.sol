@@ -30,7 +30,7 @@ contract Router is Ownable {
     recipient = _recipient;
   }
 
-  function addLiquidity(uint256 amount, address assetId) external payable {
+  function addLiquidity(uint256 amount, address assetId, bytes calldata signature) external payable {
     SignedLiquidityData memory payload = SignedLiquidityData({
       amount: amount,
       assetId: assetId
@@ -41,7 +41,7 @@ contract Router is Ownable {
     return transactionManager.addLiquidity{ value: LibAsset.isNativeAsset(assetId) ? msg.value : 0 }(amount, assetId);
   }
 
-  function removeLiquidity(uint256 amount, address assetId) external {
+  function removeLiquidity(uint256 amount, address assetId, bytes calldata signature) external {
     SignedLiquidityData memory payload = SignedLiquidityData({
       amount: amount,
       assetId: assetId
@@ -52,25 +52,22 @@ contract Router is Ownable {
     return transactionManager.removeLiquidity(amount, assetId, payable(recipient));
   }
 
-  function prepare(ITransactionManager.PrepareArgs calldata args) payable external returns (ITransactionManager.TransactionData memory) {
-    ITransactionManager.PrepareArgs memory payload = ITransactionManager.PrepareArgs(args);
-    address recovered = recoverSignature(abi.encode(payload), signature);
+  function prepare(ITransactionManager.PrepareArgs calldata args, bytes calldata signature) payable external returns (ITransactionManager.TransactionData memory) {
+    address recovered = recoverSignature(abi.encode(args), signature);
     require(recovered == signer, "Signature is not valid");
 
     return transactionManager.prepare{ value: LibAsset.isNativeAsset(args.invariantData.sendingAssetId) ? msg.value : 0 }(args);
   }
 
-  function fulfill(ITransactionManager.FulfillArgs calldata args) external returns (ITransactionManager.TransactionData memory) {
-    ITransactionManager.FulfillArgs memory payload = ITransactionManager.FulfillArgs(args);
-    address recovered = recoverSignature(abi.encode(payload), signature);
+  function fulfill(ITransactionManager.FulfillArgs calldata args, bytes calldata signature) external returns (ITransactionManager.TransactionData memory) {
+    address recovered = recoverSignature(abi.encode(args), signature);
     require(recovered == signer, "Signature is not valid");
 
     return transactionManager.fulfill(args);
   }
 
-  function cancel(ITransactionManager.CancelArgs calldata args) external returns (ITransactionManager.TransactionData memory) {
-    ITransactionManager.CancelArgs memory payload = ITransactionManager.CancelArgs(args);
-    address recovered = recoverSignature(abi.encode(payload), signature);
+  function cancel(ITransactionManager.CancelArgs calldata args, bytes calldata signature) external returns (ITransactionManager.TransactionData memory) {
+    address recovered = recoverSignature(abi.encode(args), signature);
     require(recovered == signer, "Signature is not valid");
 
     return transactionManager.cancel(args);
