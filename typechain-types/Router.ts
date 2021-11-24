@@ -187,7 +187,6 @@ export type PrepareArgsStructOutput = [
 
 export interface RouterInterface extends utils.Interface {
   functions: {
-    "addLiquidity(uint256,address,bytes)": FunctionFragment;
     "cancel(((address,address,address,address,address,address,address,address,address,bytes32,bytes32,uint256,uint256,uint256,uint256,uint256),bytes,bytes),bytes)": FunctionFragment;
     "fulfill(((address,address,address,address,address,address,address,address,address,bytes32,bytes32,uint256,uint256,uint256,uint256,uint256),uint256,bytes,bytes,bytes),bytes)": FunctionFragment;
     "owner()": FunctionFragment;
@@ -195,16 +194,12 @@ export interface RouterInterface extends utils.Interface {
     "recipient()": FunctionFragment;
     "removeLiquidity(uint256,address,bytes)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
-    "router()": FunctionFragment;
     "setRecipient(address)": FunctionFragment;
+    "signer()": FunctionFragment;
     "transactionManager()": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
   };
 
-  encodeFunctionData(
-    functionFragment: "addLiquidity",
-    values: [BigNumberish, string, BytesLike]
-  ): string;
   encodeFunctionData(
     functionFragment: "cancel",
     values: [CancelArgsStruct, BytesLike]
@@ -227,11 +222,11 @@ export interface RouterInterface extends utils.Interface {
     functionFragment: "renounceOwnership",
     values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: "router", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "setRecipient",
     values: [string]
   ): string;
+  encodeFunctionData(functionFragment: "signer", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "transactionManager",
     values?: undefined
@@ -241,10 +236,6 @@ export interface RouterInterface extends utils.Interface {
     values: [string]
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "addLiquidity",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "cancel", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "fulfill", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
@@ -258,11 +249,11 @@ export interface RouterInterface extends utils.Interface {
     functionFragment: "renounceOwnership",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "router", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "setRecipient",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "signer", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "transactionManager",
     data: BytesLike
@@ -314,13 +305,6 @@ export interface Router extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    addLiquidity(
-      amount: BigNumberish,
-      assetId: string,
-      signature: BytesLike,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<ContractTransaction>;
-
     cancel(
       args: CancelArgsStruct,
       signature: BytesLike,
@@ -354,12 +338,12 @@ export interface Router extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    router(overrides?: CallOverrides): Promise<[string]>;
-
     setRecipient(
       _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
+
+    signer(overrides?: CallOverrides): Promise<[string]>;
 
     transactionManager(overrides?: CallOverrides): Promise<[string]>;
 
@@ -368,13 +352,6 @@ export interface Router extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
-
-  addLiquidity(
-    amount: BigNumberish,
-    assetId: string,
-    signature: BytesLike,
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
 
   cancel(
     args: CancelArgsStruct,
@@ -409,8 +386,6 @@ export interface Router extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  router(overrides?: CallOverrides): Promise<string>;
-
   setRecipient(
     _recipient: string,
     overrides?: Overrides & { from?: string | Promise<string> }
@@ -424,13 +399,6 @@ export interface Router extends BaseContract {
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    addLiquidity(
-      amount: BigNumberish,
-      assetId: string,
-      signature: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     cancel(
       args: CancelArgsStruct,
       signature: BytesLike,
@@ -462,9 +430,9 @@ export interface Router extends BaseContract {
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
-    router(overrides?: CallOverrides): Promise<string>;
-
     setRecipient(_recipient: string, overrides?: CallOverrides): Promise<void>;
+
+    signer(overrides?: CallOverrides): Promise<string>;
 
     transactionManager(overrides?: CallOverrides): Promise<string>;
 
@@ -486,13 +454,6 @@ export interface Router extends BaseContract {
   };
 
   estimateGas: {
-    addLiquidity(
-      amount: BigNumberish,
-      assetId: string,
-      signature: BytesLike,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<BigNumber>;
-
     cancel(
       args: CancelArgsStruct,
       signature: BytesLike,
@@ -526,12 +487,12 @@ export interface Router extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    router(overrides?: CallOverrides): Promise<BigNumber>;
-
     setRecipient(
       _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
+
+    signer(overrides?: CallOverrides): Promise<BigNumber>;
 
     transactionManager(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -542,13 +503,6 @@ export interface Router extends BaseContract {
   };
 
   populateTransaction: {
-    addLiquidity(
-      amount: BigNumberish,
-      assetId: string,
-      signature: BytesLike,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
-    ): Promise<PopulatedTransaction>;
-
     cancel(
       args: CancelArgsStruct,
       signature: BytesLike,
@@ -582,12 +536,12 @@ export interface Router extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    router(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
     setRecipient(
       _recipient: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
+
+    signer(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     transactionManager(
       overrides?: CallOverrides

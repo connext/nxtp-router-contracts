@@ -4,12 +4,10 @@
 import {
   BaseContract,
   BigNumber,
-  BigNumberish,
   BytesLike,
   CallOverrides,
   ContractTransaction,
   Overrides,
-  PayableOverrides,
   PopulatedTransaction,
   Signer,
   utils,
@@ -21,45 +19,73 @@ import { TypedEventFilter, TypedEvent, TypedListener, OnEvent } from "./common";
 export interface RouterFactoryInterface extends utils.Interface {
   functions: {
     "createRouter(address,address)": FunctionFragment;
-    "createRouterAndAddLiquidity(address,address,address,uint256,bytes)": FunctionFragment;
-    "init(address)": FunctionFragment;
+    "owner()": FunctionFragment;
+    "renounceOwnership()": FunctionFragment;
+    "setTransactionManager(address)": FunctionFragment;
     "transactionManager()": FunctionFragment;
+    "transferOwnership(address)": FunctionFragment;
   };
 
   encodeFunctionData(
     functionFragment: "createRouter",
     values: [string, string]
   ): string;
+  encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "createRouterAndAddLiquidity",
-    values: [string, string, string, BigNumberish, BytesLike]
+    functionFragment: "renounceOwnership",
+    values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: "init", values: [string]): string;
+  encodeFunctionData(
+    functionFragment: "setTransactionManager",
+    values: [string]
+  ): string;
   encodeFunctionData(
     functionFragment: "transactionManager",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "transferOwnership",
+    values: [string]
   ): string;
 
   decodeFunctionResult(
     functionFragment: "createRouter",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "createRouterAndAddLiquidity",
+    functionFragment: "renounceOwnership",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "init", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "setTransactionManager",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "transactionManager",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
 
   events: {
+    "OwnershipTransferred(address,address)": EventFragment;
     "RouterCreated(address)": EventFragment;
   };
 
+  getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RouterCreated"): EventFragment;
 }
+
+export type OwnershipTransferredEvent = TypedEvent<
+  [string, string],
+  { previousOwner: string; newOwner: string }
+>;
+
+export type OwnershipTransferredEventFilter =
+  TypedEventFilter<OwnershipTransferredEvent>;
 
 export type RouterCreatedEvent = TypedEvent<[string], { router: string }>;
 
@@ -98,21 +124,23 @@ export interface RouterFactory extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    createRouterAndAddLiquidity(
-      signer: string,
-      recipient: string,
-      assetId: string,
-      amount: BigNumberish,
-      signature: BytesLike,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    owner(overrides?: CallOverrides): Promise<[string]>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
-    init(
+    setTransactionManager(
       _transactionManager: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
     transactionManager(overrides?: CallOverrides): Promise<[string]>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
   };
 
   createRouter(
@@ -121,21 +149,23 @@ export interface RouterFactory extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  createRouterAndAddLiquidity(
-    signer: string,
-    recipient: string,
-    assetId: string,
-    amount: BigNumberish,
-    signature: BytesLike,
-    overrides?: PayableOverrides & { from?: string | Promise<string> }
+  owner(overrides?: CallOverrides): Promise<string>;
+
+  renounceOwnership(
+    overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  init(
+  setTransactionManager(
     _transactionManager: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   transactionManager(overrides?: CallOverrides): Promise<string>;
+
+  transferOwnership(
+    newOwner: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
 
   callStatic: {
     createRouter(
@@ -144,21 +174,33 @@ export interface RouterFactory extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>;
 
-    createRouterAndAddLiquidity(
-      signer: string,
-      recipient: string,
-      assetId: string,
-      amount: BigNumberish,
-      signature: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>;
+    owner(overrides?: CallOverrides): Promise<string>;
 
-    init(_transactionManager: string, overrides?: CallOverrides): Promise<void>;
+    renounceOwnership(overrides?: CallOverrides): Promise<void>;
+
+    setTransactionManager(
+      _transactionManager: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     transactionManager(overrides?: CallOverrides): Promise<string>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
   };
 
   filters: {
+    "OwnershipTransferred(address,address)"(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): OwnershipTransferredEventFilter;
+    OwnershipTransferred(
+      previousOwner?: string | null,
+      newOwner?: string | null
+    ): OwnershipTransferredEventFilter;
+
     "RouterCreated(address)"(router?: null): RouterCreatedEventFilter;
     RouterCreated(router?: null): RouterCreatedEventFilter;
   };
@@ -170,21 +212,23 @@ export interface RouterFactory extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    createRouterAndAddLiquidity(
-      signer: string,
-      recipient: string,
-      assetId: string,
-      amount: BigNumberish,
-      signature: BytesLike,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    owner(overrides?: CallOverrides): Promise<BigNumber>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
-    init(
+    setTransactionManager(
       _transactionManager: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
     transactionManager(overrides?: CallOverrides): Promise<BigNumber>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -194,22 +238,24 @@ export interface RouterFactory extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    createRouterAndAddLiquidity(
-      signer: string,
-      recipient: string,
-      assetId: string,
-      amount: BigNumberish,
-      signature: BytesLike,
-      overrides?: PayableOverrides & { from?: string | Promise<string> }
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    renounceOwnership(
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
-    init(
+    setTransactionManager(
       _transactionManager: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
     transactionManager(
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };
 }
