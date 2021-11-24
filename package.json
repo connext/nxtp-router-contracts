@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "@connext/nxtp-contracts": "0.0.86",
+    "@connext/nxtp-utils": "0.0.88",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "dotenv": "^10.0.0",
     "eslint": "^8.3.0",
