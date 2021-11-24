@@ -5,20 +5,19 @@ import { solidity } from "ethereum-waffle";
 use(solidity);
 
 import { hexlify, keccak256, randomBytes } from "ethers/lib/utils";
-import { Wallet, BigNumber, BigNumberish, constants, Contract, providers } from "ethers";
+import { Wallet, BigNumber, BigNumberish, constants, Contract, providers, ContractReceipt } from "ethers";
 import { RevertableERC20, TransactionManager, FeeERC20, ERC20 } from "@connext/nxtp-contracts";
 import TransactionManagerArtifact from "@connext/nxtp-contracts/artifacts/contracts/TransactionManager.sol/TransactionManager.json";
 import RevertableERC20Artifact from "@connext/nxtp-contracts/artifacts/contracts/test/RevertableERC20.sol/RevertableERC20.json";
-import FeeERC20Artifact from "@connext/nxtp-contracts/artifacts/contracts/test/FeeERC20.sol/FeeERC20.json";
 
 import { InvariantTransactionData, VariantTransactionData } from "@connext/nxtp-utils";
 import {
   deployContract,
   MAX_FEE_PER_GAS,
-  getOnchainBalance,
-  assertReceiptEvent,
-  signAddLiquidityTransactionPayload,
+  convertToPrepareArgs,
+  signRemoveLiquidityTransactionPayload,
   signPrepareTransactionPayload,
+  encodePrepareData,
 } from "./utils";
 
 // import types
@@ -30,13 +29,10 @@ const EmptyCallDataHash = keccak256(EmptyBytes);
 
 const createFixtureLoader = waffle.createFixtureLoader;
 describe("Router Contract", function () {
-  const [wallet, router, routerReceipient, user, receiver, other] = waffle.provider.getWallets() as Wallet[];
+  const [wallet, router, routerReceipient, user, receiver, gelato, other] = waffle.provider.getWallets() as Wallet[];
   let routerContract: Router;
   let transactionManagerReceiverSide: TransactionManager;
-  //   let routerFactoryContract: RouterFactory;
-  let tokenA: RevertableERC20;
-  let tokenB: RevertableERC20;
-  let feeToken: FeeERC20;
+  let token: RevertableERC20;
   const sendingChainId = 1337;
   const receivingChainId = 1338;
 
@@ -54,18 +50,12 @@ describe("Router Contract", function () {
       router.address,
     );
 
-    tokenA = await deployContract<RevertableERC20>(RevertableERC20Artifact);
-
-    tokenB = await deployContract<RevertableERC20>(RevertableERC20Artifact);
-
-    feeToken = await deployContract<FeeERC20>(FeeERC20Artifact);
+    token = await deployContract<RevertableERC20>(RevertableERC20Artifact);
 
     return {
       routerContract,
       transactionManagerReceiverSide,
-      tokenA,
-      tokenB,
-      feeToken,
+      token,
     };
   };
 
@@ -85,38 +75,33 @@ describe("Router Contract", function () {
     }
   };
 
+  const approveTokens = async (amount: BigNumberish, approver: Wallet, spender: string, asset: ERC20 = token) => {
+    const approveTx = await asset.connect(approver).approve(spender, amount);
+    await approveTx.wait();
+    const allowance = await asset.allowance(approver.address, spender);
+    expect(allowance).to.be.at.least(amount);
+  };
+
   let loadFixture: ReturnType<typeof createFixtureLoader>;
   before("create fixture loader", async () => {
     loadFixture = createFixtureLoader([wallet, router, user, receiver, other]);
   });
 
   beforeEach(async function () {
-    ({ transactionManagerReceiverSide, tokenA, tokenB } = await loadFixture(fixture));
-
-    const liq = "10000";
-    let tx = await tokenA.connect(wallet).transfer(router.address, liq);
-    await tx.wait();
-    tx = await tokenB.connect(wallet).transfer(router.address, liq);
-    await tx.wait();
-
-    const prepareFunds = "10000";
-    tx = await tokenA.connect(wallet).transfer(user.address, prepareFunds);
-    await tx.wait();
-    tx = await tokenB.connect(wallet).transfer(user.address, prepareFunds);
-    await tx.wait();
-
-    const feeFunds = "10000";
-    tx = await feeToken.connect(wallet).transfer(user.address, feeFunds);
-    await tx.wait();
-    tx = await feeToken.connect(wallet).transfer(router.address, feeFunds);
-    await tx.wait();
+    ({ transactionManagerReceiverSide, token } = await loadFixture(fixture));
 
     // Prep contracts with router and assets
-    await addPrivileges(
-      transactionManagerReceiverSide,
-      [router.address],
-      [AddressZero, tokenA.address, tokenB.address, feeToken.address],
-    );
+    await addPrivileges(transactionManagerReceiverSide, [routerContract.address], [AddressZero, token.address]);
+
+    const liq = "10000";
+    let tx = await token.connect(wallet).transfer(router.address, liq);
+    await tx.wait();
+
+    await approveTokens(liq, router, transactionManagerReceiverSide.address);
+    let addLiquidityTx = await transactionManagerReceiverSide
+      .connect(router)
+      .addLiquidityFor(liq, token.address, routerContract.address);
+    await addLiquidityTx.wait();
   });
 
   const getTransactionData = async (
@@ -129,10 +114,10 @@ describe("Router Contract", function () {
     const transaction = {
       receivingChainTxManagerAddress: transactionManagerReceiverSide.address,
       user: user.address,
-      router: router.address,
+      router: routerContract.address,
       initiator: user.address,
-      sendingAssetId: tokenA.address,
-      receivingAssetId: tokenB.address,
+      sendingAssetId: AddressZero,
+      receivingAssetId: token.address,
       sendingChainFallback: user.address,
       callTo: AddressZero,
       receivingAddress: receiver.address,
@@ -155,13 +140,6 @@ describe("Router Contract", function () {
     return { transaction, record };
   };
 
-  const approveTokens = async (amount: BigNumberish, approver: Wallet, spender: string, token: ERC20 = tokenA) => {
-    const approveTx = await token.connect(approver).approve(spender, amount);
-    await approveTx.wait();
-    const allowance = await token.allowance(approver.address, spender);
-    expect(allowance).to.be.at.least(amount);
-  };
-
   describe("constructor", async () => {
     it("should deploy", async () => {
       expect(routerContract.address).to.be.a("string");
@@ -171,8 +149,8 @@ describe("Router Contract", function () {
       expect(await routerContract.transactionManager()).to.eq(transactionManagerReceiverSide.address);
     });
 
-    it("should set transactionManagerAddress", async () => {
-      expect(await routerContract.router()).to.eq(router.address);
+    it("should set routerSigner", async () => {
+      expect(await routerContract.routerSigner()).to.eq(router.address);
     });
 
     it("should set recipient", async () => {
@@ -180,146 +158,77 @@ describe("Router Contract", function () {
     });
   });
 
-  describe("addLiquidity", () => {
-    it("should add liquidity", async () => {
-      const amount = "100";
-      const assetId = tokenA.address;
-      const signature = await signAddLiquidityTransactionPayload(amount, assetId, router);
-
-      const tx = await routerContract.addLiquidity(amount, assetId, signature);
-      console.log("addLiquidityTx: ", tx);
-    });
-  });
-
-  describe.skip("removeLiquidity", () => {
+  describe("removeLiquidity", () => {
     it("should remove liquidity", async () => {
-      //   const amount = "100";
-      //   const assetId = tokenA.address;
-      //   const signature = await signAddLiquidityTransactionPayload(amount, assetId, router);
-      //   const tx = await routerContract.addLiquidity(amount, assetId, signature);
-      //   console.log("addLiquidityTx: ", tx);
+      const amount = "100";
+      const assetId = token.address;
+      const signature = await signRemoveLiquidityTransactionPayload(amount, assetId, router);
+      const tx = await routerContract.removeLiquidity(amount, assetId, signature);
+      console.log("removeLiquidityTx: ", tx);
     });
   });
+
+  const prepare = async (
+    transaction: InvariantTransactionData,
+    record: VariantTransactionData,
+  ): Promise<ContractReceipt> => {
+    const args = convertToPrepareArgs(transaction, record);
+
+    const signature = await signPrepareTransactionPayload(
+      transaction,
+      args.amount,
+      args.expiry,
+      args.encryptedCallData,
+      args.encodedBid,
+      args.bidSignature,
+      args.encodedMeta,
+      router,
+    );
+    const prepareTx = await routerContract.connect(gelato).prepare(args, signature);
+
+    const receipt = await prepareTx.wait();
+    expect(receipt.status).to.be.eq(1);
+
+    return receipt;
+  };
 
   describe("prepare", () => {
     it("should prepare: ERC20", async () => {
-      const { transaction, record } = await getTransactionData({ initiator: routerContract.address });
-      // Send tx
-      const args = {
-        invariantData: transaction,
-        amount: record.amount,
-        expiry: record.expiry,
-        encryptedCallData: EmptyBytes,
-        encodedBid: EmptyBytes,
-        bidSignature: EmptyBytes,
-        encodedMeta: EmptyBytes,
-      };
-
-      const signature = await signPrepareTransactionPayload(
-        transaction,
-        args.amount,
-        args.expiry,
-        args.encryptedCallData,
-        args.encodedBid,
-        args.bidSignature,
-        args.encodedMeta,
-        router,
-      );
-      const tx = await routerContract.prepare(args, signature);
-      console.log("prepareTx: ", tx);
+      const { transaction, record } = await getTransactionData();
+      await prepare(transaction, record);
     });
   });
+
+  // // TODO: internal function need to create test contract
+  //   describe("recoverSignature", () => {
+  //     it("should work", async () => {
+  //       const { transaction, record } = await getTransactionData();
+  //       const args = convertToPrepareArgs(transaction, record);
+
+  //       const encodedPayload = encodePrepareData(
+  //         transaction,
+  //         args.amount,
+  //         args.expiry,
+  //         args.encryptedCallData,
+  //         args.encodedBid,
+  //         args.bidSignature,
+  //         args.encodedMeta,
+  //       );
+
+  //       const signature = await signPrepareTransactionPayload(
+  //         transaction,
+  //         args.amount,
+  //         args.expiry,
+  //         args.encryptedCallData,
+  //         args.encodedBid,
+  //         args.bidSignature,
+  //         args.encodedMeta,
+  //         router,
+  //       );
+
+  //       const res = await routerContract.recoverSignature(encodedPayload, signature);
+
+  //       expect(res).to.be.eq(router.address);
+  //     });
+  //   });
 });
-
-// const convertToPrepareArgs = (
-//     transaction: InvariantTransactionData,
-//     record: VariantTransactionData
-//   ) => {
-//     const args = {
-//       invariantData: transaction,
-//       amount: record.amount,
-//       expiry: record.expiry,
-//       encryptedCallData: EmptyBytes,
-//       encodedBid: EmptyBytes,
-//       bidSignature: EmptyBytes,
-//       encodedMeta: EmptyBytes,
-//     };
-//     return args;
-//   };
-
-//   const convertToFulfillArgs = (
-//     transaction: InvariantTransactionData,
-//     record: VariantTransactionData,
-//     relayerFee: string,
-//     signature: string,
-//     callData: string = EmptyBytes
-//   ) => {
-//     const args = {
-//       txData: {
-//         ...transaction,
-//         ...record,
-//       },
-//       relayerFee,
-//       signature,
-//       callData,
-//       encodedMeta: EmptyBytes,
-//     };
-//     return args;
-//   };
-
-//   const convertToCancelArgs = (
-//     transaction: InvariantTransactionData,
-//     record: VariantTransactionData,
-//     signature: string
-//   ) => {
-//     const args = {
-//       txData: {
-//         ...transaction,
-//         ...record,
-//       },
-//       signature,
-//       encodedMeta: EmptyBytes,
-//     };
-//     return args;
-//   };
-
-//   const setupTest = deployments.createFixture(
-//     async ({ deployments, getNamedAccounts, ethers }, options) => {
-//       await deployments.fixture(); // ensure you start from a fresh deployments
-//       const factory = await ethers.getContractFactory("TransactionManager");
-//       txManager = (await factory.deploy(1338)) as TransactionManager;
-//       console.log("txManager: ", txManager.address);
-
-//       const { deployer, alice, bob } = await getNamedAccounts();
-
-//       const routerFactory = await ethers.getContractFactory("Router", deployer);
-//       router = (await routerFactory.deploy(
-//         txManager.address,
-//         alice,
-//         bob,
-//         deployer
-//       )) as Router;
-//       const txM = await router.transactionManager();
-//       console.log("txM: ", txM);
-//       expect(txM).to.eq(txManager.address);
-
-//       const tokenFactory = await ethers.getContractFactory("TestERC20", deployer);
-//       token = (await tokenFactory.deploy()) as TestERC20;
-//       console.log("token: ", token.address);
-
-//       await txManager.addAssetId(token.address);
-//       await txManager.addRouter(router.address);
-//     }
-//   );
-
-// beforeEach(async () => {
-//     await setupTest();
-
-//     const amt = ethers.utils.parseEther("1");
-
-//     await token.approve(txManager.address, amt);
-//     await txManager.addLiquidityFor(amt, token.address, router.address);
-
-//     const liq = await txManager.routerBalances(router.address, token.address);
-//     expect(liq.toString()).to.eq(amt.toString());
-//   });
