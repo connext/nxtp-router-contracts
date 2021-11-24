@@ -31,33 +31,50 @@ contract Router is Ownable {
   }
 
   function removeLiquidity(uint256 amount, address assetId, bytes calldata signature) external {
-    SignedLiquidityData memory payload = SignedLiquidityData({
-      amount: amount,
-      assetId: assetId
-    });
-    address recovered = recoverSignature(abi.encode(payload), signature);
-    require(recovered == signer, "Signature is not valid");
+    if (msg.sender != signer) {
+      SignedLiquidityData memory payload = SignedLiquidityData({
+        amount: amount,
+        assetId: assetId
+      });
+      address recovered = recoverSignature(abi.encode(payload), signature);
+      require(recovered == signer, "Router signature is not valid");
+    }
 
     return transactionManager.removeLiquidity(amount, assetId, payable(recipient));
   }
 
-  function prepare(ITransactionManager.PrepareArgs calldata args, bytes calldata signature) payable external returns (ITransactionManager.TransactionData memory) {
-    address recovered = recoverSignature(abi.encode(args), signature);
-    require(recovered == signer, "Signature is not valid");
+  function prepare(
+    ITransactionManager.PrepareArgs calldata args, 
+    bytes calldata signature
+  ) payable external returns (ITransactionManager.TransactionData memory) {
+    if (msg.sender != signer) {
+      address recovered = recoverSignature(abi.encode(args), signature);
+      require(recovered == signer, "Router signature is not valid");
+    }
 
     return transactionManager.prepare{ value: LibAsset.isNativeAsset(args.invariantData.sendingAssetId) ? msg.value : 0 }(args);
   }
 
-  function fulfill(ITransactionManager.FulfillArgs calldata args, bytes calldata signature) external returns (ITransactionManager.TransactionData memory) {
-    address recovered = recoverSignature(abi.encode(args), signature);
-    require(recovered == signer, "Signature is not valid");
+  function fulfill(
+    ITransactionManager.FulfillArgs calldata args, 
+    bytes calldata signature
+  ) external returns (ITransactionManager.TransactionData memory) {
+    if (msg.sender != signer) {
+      address recovered = recoverSignature(abi.encode(args), signature);
+      require(recovered == signer, "Router signature is not valid");
+    }
 
     return transactionManager.fulfill(args);
   }
 
-  function cancel(ITransactionManager.CancelArgs calldata args, bytes calldata signature) external returns (ITransactionManager.TransactionData memory) {
-    address recovered = recoverSignature(abi.encode(args), signature);
-    require(recovered == signer, "Signature is not valid");
+  function cancel(
+    ITransactionManager.CancelArgs calldata args, 
+    bytes calldata signature
+  ) external returns (ITransactionManager.TransactionData memory) {
+    if (msg.sender != signer) {
+      address recovered = recoverSignature(abi.encode(args), signature);
+      require(recovered == signer, "Router signature is not valid");
+    }
 
     return transactionManager.cancel(args);
   }

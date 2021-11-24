@@ -10,18 +10,66 @@ import { RevertableERC20, TransactionManager, FeeERC20, ERC20 } from "@connext/n
 import TransactionManagerArtifact from "@connext/nxtp-contracts/artifacts/contracts/TransactionManager.sol/TransactionManager.json";
 import RevertableERC20Artifact from "@connext/nxtp-contracts/artifacts/contracts/test/RevertableERC20.sol/RevertableERC20.json";
 
-import { InvariantTransactionData, VariantTransactionData } from "@connext/nxtp-utils";
+import { InvariantTransactionData, signFulfillTransactionPayload, VariantTransactionData } from "@connext/nxtp-utils";
 import {
   deployContract,
   MAX_FEE_PER_GAS,
-  convertToPrepareArgs,
   signRemoveLiquidityTransactionPayload,
-  signPrepareTransactionPayload,
-  encodePrepareData,
+  signRouterFulfillTransactionPayload,
+  signRouterPrepareTransactionPayload,
 } from "./utils";
 
 // import types
-import { Router, RouterFactory } from "../typechain-types";
+import { Router } from "../typechain-types";
+
+const convertToPrepareArgs = (transaction: InvariantTransactionData, record: VariantTransactionData) => {
+  const args = {
+    invariantData: transaction,
+    amount: record.amount,
+    expiry: record.expiry,
+    encryptedCallData: EmptyBytes,
+    encodedBid: EmptyBytes,
+    bidSignature: EmptyBytes,
+    encodedMeta: EmptyBytes,
+  };
+  return args;
+};
+
+const convertToFulfillArgs = (
+  transaction: InvariantTransactionData,
+  record: VariantTransactionData,
+  relayerFee: string,
+  signature: string,
+  callData: string = EmptyBytes,
+) => {
+  const args = {
+    txData: {
+      ...transaction,
+      ...record,
+    },
+    relayerFee,
+    signature,
+    callData,
+    encodedMeta: EmptyBytes,
+  };
+  return args;
+};
+
+const convertToCancelArgs = (
+  transaction: InvariantTransactionData,
+  record: VariantTransactionData,
+  signature: string,
+) => {
+  const args = {
+    txData: {
+      ...transaction,
+      ...record,
+    },
+    signature,
+    encodedMeta: EmptyBytes,
+  };
+  return args;
+};
 
 const { AddressZero } = constants;
 const EmptyBytes = "0x";
@@ -164,17 +212,15 @@ describe("Router Contract", function () {
       const assetId = token.address;
       const signature = await signRemoveLiquidityTransactionPayload(amount, assetId, router);
       const tx = await routerContract.removeLiquidity(amount, assetId, signature);
-      console.log("removeLiquidityTx: ", tx);
+      const receipt = await tx.wait();
+      expect(receipt.status).to.eq(1);
     });
   });
 
-  const prepare = async (
-    transaction: InvariantTransactionData,
-    record: VariantTransactionData,
-  ): Promise<ContractReceipt> => {
+  const prepare = async (transaction: InvariantTransactionData, record: VariantTransactionData) => {
     const args = convertToPrepareArgs(transaction, record);
 
-    const signature = await signPrepareTransactionPayload(
+    const signature = await signRouterPrepareTransactionPayload(
       transaction,
       args.amount,
       args.expiry,
@@ -188,47 +234,127 @@ describe("Router Contract", function () {
 
     const receipt = await prepareTx.wait();
     expect(receipt.status).to.be.eq(1);
-
     return receipt;
   };
 
   describe("prepare", () => {
-    it("should prepare: ERC20", async () => {
+    it("should fail to prepare a bad sig", async () => {
       const { transaction, record } = await getTransactionData();
+
+      const args = convertToPrepareArgs(transaction, record);
+      const signature = await signRouterPrepareTransactionPayload(
+        transaction,
+        args.amount,
+        args.expiry,
+        args.encryptedCallData,
+        args.encodedBid,
+        args.bidSignature,
+        args.encodedMeta,
+        other, // bad signer
+      );
+
+      await expect(routerContract.connect(gelato).prepare(args, signature)).to.be.revertedWith(
+        "Router signature is not valid",
+      );
+    });
+
+    it("should prepare with a different sender", async () => {
+      const { transaction, record } = await getTransactionData();
+
       await prepare(transaction, record);
+    });
+
+    it("should prepare with the signer and no sig", async () => {
+      const { transaction, record } = await getTransactionData();
+
+      const args = convertToPrepareArgs(transaction, record);
+
+      const prepareTx = await routerContract.connect(router).prepare(args, "0x");
+
+      const receipt = await prepareTx.wait();
+      expect(receipt.status).to.be.eq(1);
+      return receipt;
     });
   });
 
-  // // TODO: internal function need to create test contract
-  //   describe("recoverSignature", () => {
-  //     it("should work", async () => {
-  //       const { transaction, record } = await getTransactionData();
-  //       const args = convertToPrepareArgs(transaction, record);
+  describe("fulfill", () => {
+    it("should fail to fulfill a bad sig", async () => {
+      const { transaction, record } = await getTransactionData();
 
-  //       const encodedPayload = encodePrepareData(
-  //         transaction,
-  //         args.amount,
-  //         args.expiry,
-  //         args.encryptedCallData,
-  //         args.encodedBid,
-  //         args.bidSignature,
-  //         args.encodedMeta,
-  //       );
+      await prepare(transaction, record);
 
-  //       const signature = await signPrepareTransactionPayload(
-  //         transaction,
-  //         args.amount,
-  //         args.expiry,
-  //         args.encryptedCallData,
-  //         args.encodedBid,
-  //         args.bidSignature,
-  //         args.encodedMeta,
-  //         router,
-  //       );
+      // Generate signature from user
+      const fulfillSignature = await signFulfillTransactionPayload(
+        transaction.transactionId,
+        "0",
+        transaction.receivingChainId,
+        transaction.receivingChainTxManagerAddress,
+        user,
+      );
 
-  //       const res = await routerContract.recoverSignature(encodedPayload, signature);
+      const args = convertToFulfillArgs(transaction, record, "0", fulfillSignature);
+      const signature = await signRouterFulfillTransactionPayload(
+        args.txData,
+        fulfillSignature,
+        args.callData,
+        args.encodedMeta,
+        other, // bad signer
+      );
 
-  //       expect(res).to.be.eq(router.address);
-  //     });
-  //   });
+      await expect(routerContract.connect(gelato).fulfill(args, signature)).to.be.revertedWith(
+        "Router signature is not valid",
+      );
+    });
+
+    it("should fulfill with a different sender", async () => {
+      const { transaction, record } = await getTransactionData();
+
+      await prepare(transaction, record);
+
+      // Generate signature from user
+      const fulfillSignature = await signFulfillTransactionPayload(
+        transaction.transactionId,
+        "0",
+        transaction.receivingChainId,
+        transaction.receivingChainTxManagerAddress,
+        user,
+      );
+
+      const args = convertToFulfillArgs(transaction, record, "0", fulfillSignature);
+      const signature = await signRouterFulfillTransactionPayload(
+        args.txData,
+        args.signature,
+        args.callData,
+        args.encodedMeta,
+        router, 
+      );
+      const fulfillTx = await routerContract.connect(gelato).fulfill(args, signature);
+
+      const receipt = await fulfillTx.wait();
+      expect(receipt.status).to.be.eq(1);
+      return receipt;
+    });
+
+    it("should fulfill with the signer and no sig", async () => {
+      const { transaction, record } = await getTransactionData();
+
+      await prepare(transaction, record);
+
+      // Generate signature from user
+      const fulfillSignature = await signFulfillTransactionPayload(
+        transaction.transactionId,
+        "0",
+        transaction.receivingChainId,
+        transaction.receivingChainTxManagerAddress,
+        user,
+      );
+
+      const args = convertToFulfillArgs(transaction, record, "0", fulfillSignature);
+      const fulfillTx = await routerContract.connect(router).fulfill(args, "0x");
+
+      const receipt = await fulfillTx.wait();
+      expect(receipt.status).to.be.eq(1);
+      return receipt;
+    });
+  });
 });

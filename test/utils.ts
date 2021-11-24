@@ -1,15 +1,15 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 
-import { ERC20Abi } from "@connext/nxtp-utils";
-import { arrayify, splitSignature, defaultAbiCoder, solidityKeccak256, keccak256 } from "ethers/lib/utils";
-import { Wallet, BigNumber, constants, Contract, ContractFactory, ContractReceipt, Signer, providers } from "ethers";
 import {
+  ERC20Abi,
   InvariantTransactionData,
   InvariantTransactionDataEncoding,
-  VariantTransactionData,
   tidy,
+  TransactionData,
 } from "@connext/nxtp-utils";
+import { arrayify, splitSignature, defaultAbiCoder, solidityKeccak256, keccak256 } from "ethers/lib/utils";
+import { Wallet, BigNumber, constants, Contract, ContractFactory, ContractReceipt, Signer, providers } from "ethers";
 import { Artifact } from "hardhat/types";
 
 export const MAX_FEE_PER_GAS = BigNumber.from("975000000");
@@ -70,27 +70,18 @@ export const assertReceiptEvent = async (receipt: ContractReceipt, eventName: st
 
 // TODO: MOVE THESE INTO nxtp-utils
 
-const SignedPrepareDataEncoding = tidy(`tuple(
-    ${InvariantTransactionDataEncoding} invariantData,
-    uint256 amount,
-    uint256 expiry,
-    bytes encryptedCallData,
-    bytes encodedBid,
-    bytes bidSignature,
-    bytes encodedMeta
-  )`);
+// Prepare
+const SignedRouterPrepareDataEncoding = tidy(`tuple(
+  ${InvariantTransactionDataEncoding} invariantData,
+  uint256 amount,
+  uint256 expiry,
+  bytes encryptedCallData,
+  bytes encodedBid,
+  bytes bidSignature,
+  bytes encodedMeta
+)`);
 
-
-const SignedRemoveLiqudityDataEncoding = tidy(`tuple(
-    uint256 amount,
-    address assetId
-  )`);
-
-const encodeRemoveLiqudityData = (amount: string, assetId: string): string => {
-  return defaultAbiCoder.encode([SignedRemoveLiqudityDataEncoding], [{ amount, assetId }]);
-};
-
-export const encodePrepareData = (
+export const encodeRouterPrepareData = (
   invariantData: InvariantTransactionData,
   amount: string,
   expiry: number,
@@ -100,7 +91,7 @@ export const encodePrepareData = (
   encodedMeta: string,
 ): string => {
   return defaultAbiCoder.encode(
-    [SignedPrepareDataEncoding],
+    [SignedRouterPrepareDataEncoding],
     [
       {
         invariantData,
@@ -115,13 +106,7 @@ export const encodePrepareData = (
   );
 };
 
-const getRemoveLiquidityHashToSign = (amount: string, assetId: string): string => {
-  const payload = encodeRemoveLiqudityData(amount, assetId);
-  const hash = solidityKeccak256(["bytes"], [payload]);
-  return hash;
-};
-
-const getPrepareTransactionHashToSign = (
+const getRouterPrepareTransactionHashToSign = (
   invariantData: InvariantTransactionData,
   amount: string,
   expiry: number,
@@ -130,7 +115,7 @@ const getPrepareTransactionHashToSign = (
   bidSignature: string,
   encodedMeta: string,
 ): string => {
-  const payload = encodePrepareData(
+  const payload = encodeRouterPrepareData(
     invariantData,
     amount,
     expiry,
@@ -141,6 +126,171 @@ const getPrepareTransactionHashToSign = (
   );
   const hash = solidityKeccak256(["bytes"], [payload]);
   return hash;
+};
+
+export const signRouterPrepareTransactionPayload = async (
+  invariantData: InvariantTransactionData,
+  amount: string,
+  expiry: number,
+  encryptedCallData: string,
+  encodedBid: string,
+  bidSignature: string,
+  encodedMeta: string,
+  signer: Wallet | Signer,
+): Promise<string> => {
+  const hash = getRouterPrepareTransactionHashToSign(
+    invariantData,
+    amount,
+    expiry,
+    encryptedCallData,
+    encodedBid,
+    bidSignature,
+    encodedMeta,
+  );
+
+  return sign(hash, signer);
+};
+
+export const TransactionDataEncoding = tidy(`tuple(
+  address receivingChainTxManagerAddress,
+  address user,
+  address router,
+  address initiator,
+  address sendingAssetId,
+  address receivingAssetId,
+  address sendingChainFallback,
+  address receivingAddress,
+  address callTo,
+  bytes32 callDataHash,
+  bytes32 transactionId,
+  uint256 sendingChainId,
+  uint256 receivingChainId,
+  uint256 amount,
+  uint256 expiry,
+  uint256 preparedBlockNumber
+)`);
+
+// Fulfill
+const SignedRouterFulfillDataEncoding = tidy(`tuple(
+  ${TransactionDataEncoding} txData,
+  uint256 relayerFee,
+  bytes signature,
+  bytes callData,
+  bytes encodedMeta
+)`);
+
+export const encodeRouterFulfillData = (
+  txData: TransactionData,
+  fulfillSignature: string,
+  callData: string,
+  encodedMeta: string,
+): string => {
+  return defaultAbiCoder.encode(
+    [SignedRouterFulfillDataEncoding],
+    [
+      {
+        txData,
+        relayerFee: "0",
+        signature: fulfillSignature,
+        callData,
+        encodedMeta,
+      },
+    ],
+  );
+};
+
+const getRouterFulfillTransactionHashToSign = (
+  txData: TransactionData,
+  fulfillSignature: string,
+  callData: string,
+  encodedMeta: string,
+): string => {
+  const payload = encodeRouterFulfillData(txData, fulfillSignature, callData, encodedMeta);
+  const hash = solidityKeccak256(["bytes"], [payload]);
+  return hash;
+};
+
+export const signRouterFulfillTransactionPayload = async (
+  txData: TransactionData,
+  fulfillSignature: string,
+  callData: string,
+  encodedMeta: string,
+  signer: Wallet | Signer,
+): Promise<string> => {
+  const hash = getRouterFulfillTransactionHashToSign(txData, fulfillSignature, callData, encodedMeta);
+
+  return sign(hash, signer);
+};
+
+// Cancel
+const SignedRouterCancelDataEncoding = tidy(`tuple(
+  ${TransactionDataEncoding} txData,
+  uint256 relayerFee,
+  bytes signature,
+  bytes callData,
+  bytes encodedMeta
+)`);
+
+export const encodeRouterCancelData = (txData: TransactionData, callData: string, encodedMeta: string): string => {
+  return defaultAbiCoder.encode(
+    [SignedRouterCancelDataEncoding],
+    [
+      {
+        txData,
+        relayerFee: "0",
+        signature: "0x",
+        callData,
+        encodedMeta,
+      },
+    ],
+  );
+};
+
+const getRouterCancelTransactionHashToSign = (
+  txData: TransactionData,
+  callData: string,
+  encodedMeta: string,
+): string => {
+  const payload = encodeRouterCancelData(txData, callData, encodedMeta);
+  const hash = solidityKeccak256(["bytes"], [payload]);
+  return hash;
+};
+
+export const signRouterCancelTransactionPayload = async (
+  txData: TransactionData,
+  callData: string,
+  encodedMeta: string,
+  signer: Wallet | Signer,
+): Promise<string> => {
+  const hash = getRouterCancelTransactionHashToSign(txData, callData, encodedMeta);
+
+  return sign(hash, signer);
+};
+
+// Remove Liquidity
+const SignedRouterRemoveLiquidityDataEncoding = tidy(`tuple(
+  uint256 amount,
+  address assetId
+)`);
+
+const encodeRouterRemoveLiquidityData = (amount: string, assetId: string): string => {
+  return defaultAbiCoder.encode([SignedRouterRemoveLiquidityDataEncoding], [{ amount, assetId }]);
+};
+
+const getRouterRemoveLiquidityHashToSign = (amount: string, assetId: string): string => {
+  const payload = encodeRouterRemoveLiquidityData(amount, assetId);
+  const hash = solidityKeccak256(["bytes"], [payload]);
+  return hash;
+};
+
+export const signRemoveLiquidityTransactionPayload = (
+  amount: string,
+  assetId: string,
+  signer: Wallet | Signer,
+): Promise<string> => {
+  const hash = getRouterRemoveLiquidityHashToSign(amount, assetId);
+
+  return sign(hash, signer);
 };
 
 const sanitizeSignature = (sig: string): string => {
@@ -166,86 +316,4 @@ const sign = async (hash: string, signer: Wallet | Signer): Promise<string> => {
   }
 
   return sanitizeSignature(await signer.signMessage(msg));
-};
-
-export const signPrepareTransactionPayload = async (
-  invariantData: InvariantTransactionData,
-  amount: string,
-  expiry: number,
-  encryptedCallData: string,
-  encodedBid: string,
-  bidSignature: string,
-  encodedMeta: string,
-  signer: Wallet | Signer,
-): Promise<string> => {
-  const hash = getPrepareTransactionHashToSign(
-    invariantData,
-    amount,
-    expiry,
-    encryptedCallData,
-    encodedBid,
-    bidSignature,
-    encodedMeta,
-  );
-
-  return sign(hash, signer);
-};
-
-export const signRemoveLiquidityTransactionPayload = (
-  amount: string,
-  assetId: string,
-  signer: Wallet | Signer,
-): Promise<string> => {
-  const hash = getRemoveLiquidityHashToSign(amount, assetId);
-
-  return sign(hash, signer);
-};
-
-export const convertToPrepareArgs = (transaction: InvariantTransactionData, record: VariantTransactionData) => {
-  const args = {
-    invariantData: transaction,
-    amount: record.amount,
-    expiry: record.expiry,
-    encryptedCallData: EmptyBytes,
-    encodedBid: EmptyBytes,
-    bidSignature: EmptyBytes,
-    encodedMeta: EmptyBytes,
-  };
-  return args;
-};
-
-export const convertToFulfillArgs = (
-  transaction: InvariantTransactionData,
-  record: VariantTransactionData,
-  relayerFee: string,
-  signature: string,
-  callData: string = EmptyBytes,
-) => {
-  const args = {
-    txData: {
-      ...transaction,
-      ...record,
-    },
-    relayerFee,
-    signature,
-    callData,
-    encodedMeta: EmptyBytes,
-  };
-  return args;
-};
-
-export const convertToCancelArgs = (
-  transaction: InvariantTransactionData,
-  record: VariantTransactionData,
-  signature: string,
-) => {
-  const args = {
-    txData: {
-      ...transaction,
-      ...record,
-    },
-    signature,
-    encodedMeta: EmptyBytes,
-  };
-  return args;
 };
