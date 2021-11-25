@@ -225,21 +225,21 @@ export const signRouterFulfillTransactionPayload = async (
 // Cancel
 const SignedRouterCancelDataEncoding = tidy(`tuple(
   ${TransactionDataEncoding} txData,
-  uint256 relayerFee,
   bytes signature,
-  bytes callData,
   bytes encodedMeta
 )`);
 
-export const encodeRouterCancelData = (txData: TransactionData, callData: string, encodedMeta: string): string => {
+export const encodeRouterCancelData = (
+  txData: TransactionData,
+  cancelSignature: string,
+  encodedMeta: string,
+): string => {
   return defaultAbiCoder.encode(
     [SignedRouterCancelDataEncoding],
     [
       {
         txData,
-        relayerFee: "0",
-        signature: "0x",
-        callData,
+        signature: cancelSignature,
         encodedMeta,
       },
     ],
@@ -248,21 +248,21 @@ export const encodeRouterCancelData = (txData: TransactionData, callData: string
 
 const getRouterCancelTransactionHashToSign = (
   txData: TransactionData,
-  callData: string,
+  cancelSignature: string,
   encodedMeta: string,
 ): string => {
-  const payload = encodeRouterCancelData(txData, callData, encodedMeta);
+  const payload = encodeRouterCancelData(txData, cancelSignature, encodedMeta);
   const hash = solidityKeccak256(["bytes"], [payload]);
   return hash;
 };
 
 export const signRouterCancelTransactionPayload = async (
   txData: TransactionData,
-  callData: string,
+  cancelSignature: string,
   encodedMeta: string,
   signer: Wallet | Signer,
 ): Promise<string> => {
-  const hash = getRouterCancelTransactionHashToSign(txData, callData, encodedMeta);
+  const hash = getRouterCancelTransactionHashToSign(txData, cancelSignature, encodedMeta);
 
   return sign(hash, signer);
 };

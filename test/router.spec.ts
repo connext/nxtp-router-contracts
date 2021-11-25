@@ -10,11 +10,12 @@ import { RevertableERC20, TransactionManager, FeeERC20, ERC20 } from "@connext/n
 import TransactionManagerArtifact from "@connext/nxtp-contracts/artifacts/contracts/TransactionManager.sol/TransactionManager.json";
 import RevertableERC20Artifact from "@connext/nxtp-contracts/artifacts/contracts/test/RevertableERC20.sol/RevertableERC20.json";
 
-import { InvariantTransactionData, signFulfillTransactionPayload, VariantTransactionData } from "@connext/nxtp-utils";
+import { InvariantTransactionData, signCancelTransactionPayload, signFulfillTransactionPayload, VariantTransactionData } from "@connext/nxtp-utils";
 import {
   deployContract,
   MAX_FEE_PER_GAS,
   signRemoveLiquidityTransactionPayload,
+  signRouterCancelTransactionPayload,
   signRouterFulfillTransactionPayload,
   signRouterPrepareTransactionPayload,
 } from "./utils";
@@ -353,6 +354,82 @@ describe("Router Contract", function () {
       const fulfillTx = await routerContract.connect(router).fulfill(args, "0x");
 
       const receipt = await fulfillTx.wait();
+      expect(receipt.status).to.be.eq(1);
+      return receipt;
+    });
+  });
+
+  describe("cancel", () => {
+    it("should fail to cancel a bad sig", async () => {
+      const { transaction, record } = await getTransactionData();
+
+      await prepare(transaction, record);
+
+      // Generate signature from user
+      const cancelSignature = await signCancelTransactionPayload(
+        transaction.transactionId,
+        transaction.receivingChainId,
+        transaction.receivingChainTxManagerAddress,
+        user,
+      );
+
+      const args = convertToCancelArgs(transaction, record, cancelSignature);
+      const signature = await signRouterCancelTransactionPayload(
+        args.txData,
+        cancelSignature,
+        args.encodedMeta,
+        other, // bad signer
+      );
+
+      await expect(routerContract.connect(gelato).cancel(args, signature)).to.be.revertedWith(
+        "Router signature is not valid",
+      );
+    });
+
+    it("should cancel with a different sender", async () => {
+      const { transaction, record } = await getTransactionData();
+
+      await prepare(transaction, record);
+
+      // Generate signature from user
+      const cancelSignature = await signCancelTransactionPayload(
+        transaction.transactionId,
+        transaction.receivingChainId,
+        transaction.receivingChainTxManagerAddress,
+        user,
+      );
+
+      const args = convertToCancelArgs(transaction, record, cancelSignature);
+      const signature = await signRouterCancelTransactionPayload(
+        args.txData,
+        cancelSignature,
+        args.encodedMeta,
+        router,
+      );
+      const cancelTx = await routerContract.connect(gelato).cancel(args, signature);
+
+      const receipt = await cancelTx.wait();
+      expect(receipt.status).to.be.eq(1);
+      return receipt;
+    });
+
+    it("should cancel with the signer and no sig", async () => {
+      const { transaction, record } = await getTransactionData();
+
+      await prepare(transaction, record);
+
+      // Generate signature from user
+      const cancelSignature = await signCancelTransactionPayload(
+        transaction.transactionId,
+        transaction.receivingChainId,
+        transaction.receivingChainTxManagerAddress,
+        user,
+      );
+
+      const args = convertToCancelArgs(transaction, record, cancelSignature);
+      const cancelTx = await routerContract.connect(router).cancel(args, "0x");
+
+      const receipt = await cancelTx.wait();
       expect(receipt.status).to.be.eq(1);
       return receipt;
     });
