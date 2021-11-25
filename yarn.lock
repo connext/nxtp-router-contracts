@@ -62,6 +62,30 @@
     sinon-chai "^3.7.0"
     ts-natsutil "^1.1.1"
 
+"@connext/nxtp-utils@0.0.88":
+  version "0.0.88"
+  resolved "https://registry.yarnpkg.com/@connext/nxtp-utils/-/nxtp-utils-0.0.88.tgz#091f68b54f19dc87f20ff8e9f60d633bcb1fbed1"
+  integrity sha512-t6cFwlZij/OwU3BJtJhKMWeGinTu2HujpmsThBn3YS8fmBd1FADA+Zt8vDhQi7xfmSbqb8pDhVv5tI8hsf5hdw==
+  dependencies:
+    "@sinclair/typebox" "^0.20.4"
+    "@typescript-eslint/eslint-plugin" "^4.29.2"
+    ajv "^8.6.2"
+    ajv-formats "^2.1.1"
+    axios "^0.21.1"
+    chai "4.3.4"
+    chai-as-promised "7.1.1"
+    chai-subset "^1.6.0"
+    eccrypto-js "^5.4.0"
+    eslint "^7.32.0"
+    eth-sig-util "^2.5.3"
+    ethers "^5.4.6"
+    graphql-request "^3.5.0"
+    hyperid "^2.3.1"
+    pino "^6.13.0"
+    secp256k1 "^4.0.2"
+    sinon-chai "^3.7.0"
+    ts-natsutil "^1.1.1"
+
 "@cspotcode/source-map-consumer@0.8.0":
   version "0.8.0"
   resolved "https://registry.yarnpkg.com/@cspotcode/source-map-consumer/-/source-map-consumer-0.8.0.tgz#33bf4b7b39c178821606f669bbc447a6a629786b"
@@ -656,10 +680,10 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@nomiclabs/hardhat-ethers@^2.0.2":
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.0.2.tgz#c472abcba0c5185aaa4ad4070146e95213c68511"
-  integrity sha512-6quxWe8wwS4X5v3Au8q1jOvXYEPkS1Fh+cME5u6AwNdnI4uERvPlVjlgRWzpnb+Rrt1l/cEqiNRH9GlsBMSDQg==
+"@nomiclabs/hardhat-ethers@npm:hardhat-deploy-ethers@^0.3.0-beta.11":
+  version "0.3.0-beta.11"
+  resolved "https://registry.yarnpkg.com/hardhat-deploy-ethers/-/hardhat-deploy-ethers-0.3.0-beta.11.tgz#7f9122301853b01cb85b5ac85ba84dd764c98b07"
+  integrity sha512-HnniBGBYsFRQDXBy3bQ27i86pQQnHkN0Mxdwiu869jZURY2gDQ4OEZxcXItnWQqBjYiEaavVyw/Xle7qwKOBAg==
 
 "@nomiclabs/hardhat-waffle@^2.0.1":
   version "2.0.1"

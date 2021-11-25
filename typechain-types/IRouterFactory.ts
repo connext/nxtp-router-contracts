@@ -4,6 +4,7 @@
 import {
   BaseContract,
   BigNumber,
+  BigNumberish,
   BytesLike,
   CallOverrides,
   ContractTransaction,
@@ -18,12 +19,12 @@ import { TypedEventFilter, TypedEvent, TypedListener, OnEvent } from "./common";
 
 export interface IRouterFactoryInterface extends utils.Interface {
   functions: {
-    "createRouter(address)": FunctionFragment;
+    "createRouter(address,address,uint256)": FunctionFragment;
   };
 
   encodeFunctionData(
     functionFragment: "createRouter",
-    values: [string]
+    values: [string, string, BigNumberish]
   ): string;
 
   decodeFunctionResult(
@@ -70,18 +71,27 @@ export interface IRouterFactory extends BaseContract {
 
   functions: {
     createRouter(
+      router: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
 
   createRouter(
+    router: string,
     recipient: string,
+    chainId: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    createRouter(recipient: string, overrides?: CallOverrides): Promise<string>;
+    createRouter(
+      router: string,
+      recipient: string,
+      chainId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>;
   };
 
   filters: {
@@ -91,14 +101,18 @@ export interface IRouterFactory extends BaseContract {
 
   estimateGas: {
     createRouter(
+      router: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
 
   populateTransaction: {
     createRouter(
+      router: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

@@ -27,8 +27,18 @@ const _abi = [
     inputs: [
       {
         internalType: "address",
+        name: "router",
+        type: "address",
+      },
+      {
+        internalType: "address",
         name: "recipient",
         type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "chainId",
+        type: "uint256",
       },
     ],
     name: "createRouter",

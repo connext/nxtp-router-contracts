@@ -27,7 +27,7 @@
   "author": "Connext",
   "license": "ISC",
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.11",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "4.3.3",
     "@typechain/ethers-v5": "^8.0.4",
@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "@connext/nxtp-contracts": "0.0.86",
+    "@connext/nxtp-utils": "0.0.88",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "dotenv": "^10.0.0",
     "eslint": "^8.3.0",

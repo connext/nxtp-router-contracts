@@ -1,26 +1,27 @@
-import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-
-
 
 /**
  * Hardhat task defining the contract deployments for nxtp
  *
  * @param hre Hardhat environment to deploy to
  */
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment): Promise<void> => {
-  const chainId = await hre.getChainId();
+const func: DeployFunction = async ({
+  getNamedAccounts,
+  deployments,
+  getUnnamedAccounts,
+}): Promise<void> => {
 
   let deployer;
-  ({ deployer } = await hre.getNamedAccounts());
+  ({ deployer } = await getNamedAccounts());
   if (!deployer) {
-    [deployer] = await hre.getUnnamedAccounts();
+    [deployer] = await getUnnamedAccounts();
   }
 
-  await hre.deployments.deploy("RouterFactory", {
+  await deployments.deploy("RouterFactory", {
     from: deployer,
-    args: [chainId],
+    args: [],
     log: true,
+    deterministicDeployment: true,
   });
 };
 export default func;
