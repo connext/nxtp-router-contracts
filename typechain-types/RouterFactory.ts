@@ -4,6 +4,7 @@
 import {
   BaseContract,
   BigNumber,
+  BigNumberish,
   BytesLike,
   CallOverrides,
   ContractTransaction,
@@ -18,7 +19,7 @@ import { TypedEventFilter, TypedEvent, TypedListener, OnEvent } from "./common";
 
 export interface RouterFactoryInterface extends utils.Interface {
   functions: {
-    "createRouter(address,address)": FunctionFragment;
+    "createRouter(address,address,uint256)": FunctionFragment;
     "owner()": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
     "setTransactionManager(address)": FunctionFragment;
@@ -28,7 +29,7 @@ export interface RouterFactoryInterface extends utils.Interface {
 
   encodeFunctionData(
     functionFragment: "createRouter",
-    values: [string, string]
+    values: [string, string, BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
   encodeFunctionData(
@@ -121,6 +122,7 @@ export interface RouterFactory extends BaseContract {
     createRouter(
       signer: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
@@ -146,6 +148,7 @@ export interface RouterFactory extends BaseContract {
   createRouter(
     signer: string,
     recipient: string,
+    chainId: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -171,6 +174,7 @@ export interface RouterFactory extends BaseContract {
     createRouter(
       signer: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>;
 
@@ -209,6 +213,7 @@ export interface RouterFactory extends BaseContract {
     createRouter(
       signer: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -235,6 +240,7 @@ export interface RouterFactory extends BaseContract {
     createRouter(
       signer: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 

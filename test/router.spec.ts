@@ -5,12 +5,17 @@ import { solidity } from "ethereum-waffle";
 use(solidity);
 
 import { hexlify, keccak256, randomBytes } from "ethers/lib/utils";
-import { Wallet, BigNumber, BigNumberish, constants, Contract, providers, ContractReceipt } from "ethers";
-import { RevertableERC20, TransactionManager, FeeERC20, ERC20 } from "@connext/nxtp-contracts";
+import { Wallet, BigNumberish, constants } from "ethers";
+import { RevertableERC20, TransactionManager, ERC20 } from "@connext/nxtp-contracts";
 import TransactionManagerArtifact from "@connext/nxtp-contracts/artifacts/contracts/TransactionManager.sol/TransactionManager.json";
 import RevertableERC20Artifact from "@connext/nxtp-contracts/artifacts/contracts/test/RevertableERC20.sol/RevertableERC20.json";
 
-import { InvariantTransactionData, signCancelTransactionPayload, signFulfillTransactionPayload, VariantTransactionData } from "@connext/nxtp-utils";
+import {
+  InvariantTransactionData,
+  signCancelTransactionPayload,
+  signFulfillTransactionPayload,
+  VariantTransactionData,
+} from "@connext/nxtp-utils";
 import {
   deployContract,
   MAX_FEE_PER_GAS,
@@ -97,6 +102,7 @@ describe("Router Contract", function () {
       router.address,
       routerReceipient.address,
       router.address,
+      receivingChainId,
     );
 
     token = await deployContract<RevertableERC20>(RevertableERC20Artifact);
@@ -211,7 +217,13 @@ describe("Router Contract", function () {
     it("should remove liquidity", async () => {
       const amount = "100";
       const assetId = token.address;
-      const signature = await signRemoveLiquidityTransactionPayload(amount, assetId, router);
+      const signature = await signRemoveLiquidityTransactionPayload(
+        amount,
+        assetId,
+        receivingChainId,
+        router.address,
+        router,
+      );
       const tx = await routerContract.removeLiquidity(amount, assetId, signature);
       const receipt = await tx.wait();
       expect(receipt.status).to.eq(1);
@@ -327,7 +339,7 @@ describe("Router Contract", function () {
         args.signature,
         args.callData,
         args.encodedMeta,
-        router, 
+        router,
       );
       const fulfillTx = await routerContract.connect(gelato).fulfill(args, signature);
 

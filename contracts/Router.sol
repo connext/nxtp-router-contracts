@@ -12,17 +12,22 @@ contract Router is Ownable {
 
   address public recipient;
 
-  address immutable public signer;
+  address public signer;
 
-  struct SignedLiquidityData {
+  uint256 private immutable chainId;
+
+  struct SignedRemoveLiquidityData {
     uint256 amount;
-    address assetId;// For domain separation
+    address assetId;
+    uint256 chainId; // For domain separation
+    address signer; // For domain separation
   }
 
-  constructor(address _transactionManager, address _signer, address _recipient, address _owner) {
+  constructor(address _transactionManager, address _signer, address _recipient, address _owner, uint256 _chainId) {
     transactionManager = ITransactionManager(_transactionManager);
     signer = _signer;
     recipient = _recipient;
+    chainId = _chainId;
     transferOwnership(_owner);
   }
 
@@ -30,11 +35,17 @@ contract Router is Ownable {
     recipient = _recipient;
   }
 
+  function setSigner(address _signer) external onlyOwner {
+    signer = _signer;
+  }
+
   function removeLiquidity(uint256 amount, address assetId, bytes calldata signature) external {
     if (msg.sender != signer) {
-      SignedLiquidityData memory payload = SignedLiquidityData({
+      SignedRemoveLiquidityData memory payload = SignedRemoveLiquidityData({
         amount: amount,
-        assetId: assetId
+        assetId: assetId,
+        chainId: chainId,
+        signer: signer
       });
       address recovered = recoverSignature(abi.encode(payload), signature);
       require(recovered == signer, "Router signature is not valid");

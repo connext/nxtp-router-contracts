@@ -195,6 +195,7 @@ export interface RouterInterface extends utils.Interface {
     "removeLiquidity(uint256,address,bytes)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
     "setRecipient(address)": FunctionFragment;
+    "setSigner(address)": FunctionFragment;
     "signer()": FunctionFragment;
     "transactionManager()": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
@@ -226,6 +227,7 @@ export interface RouterInterface extends utils.Interface {
     functionFragment: "setRecipient",
     values: [string]
   ): string;
+  encodeFunctionData(functionFragment: "setSigner", values: [string]): string;
   encodeFunctionData(functionFragment: "signer", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "transactionManager",
@@ -253,6 +255,7 @@ export interface RouterInterface extends utils.Interface {
     functionFragment: "setRecipient",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "setSigner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "signer", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "transactionManager",
@@ -343,6 +346,11 @@ export interface Router extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
+    setSigner(
+      _signer: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
     signer(overrides?: CallOverrides): Promise<[string]>;
 
     transactionManager(overrides?: CallOverrides): Promise<[string]>;
@@ -391,6 +399,11 @@ export interface Router extends BaseContract {
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
+  setSigner(
+    _signer: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
   transactionManager(overrides?: CallOverrides): Promise<string>;
 
   transferOwnership(
@@ -431,6 +444,8 @@ export interface Router extends BaseContract {
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
     setRecipient(_recipient: string, overrides?: CallOverrides): Promise<void>;
+
+    setSigner(_signer: string, overrides?: CallOverrides): Promise<void>;
 
     signer(overrides?: CallOverrides): Promise<string>;
 
@@ -492,6 +507,11 @@ export interface Router extends BaseContract {
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
+    setSigner(
+      _signer: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
     signer(overrides?: CallOverrides): Promise<BigNumber>;
 
     transactionManager(overrides?: CallOverrides): Promise<BigNumber>;
@@ -538,6 +558,11 @@ export interface Router extends BaseContract {
 
     setRecipient(
       _recipient: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setSigner(
+      _signer: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 

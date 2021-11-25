@@ -4,6 +4,7 @@
 import {
   BaseContract,
   BigNumber,
+  BigNumberish,
   BytesLike,
   CallOverrides,
   ContractTransaction,
@@ -18,12 +19,12 @@ import { TypedEventFilter, TypedEvent, TypedListener, OnEvent } from "./common";
 
 export interface IRouterFactoryInterface extends utils.Interface {
   functions: {
-    "createRouter(address,address)": FunctionFragment;
+    "createRouter(address,address,uint256)": FunctionFragment;
   };
 
   encodeFunctionData(
     functionFragment: "createRouter",
-    values: [string, string]
+    values: [string, string, BigNumberish]
   ): string;
 
   decodeFunctionResult(
@@ -72,6 +73,7 @@ export interface IRouterFactory extends BaseContract {
     createRouter(
       router: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
   };
@@ -79,6 +81,7 @@ export interface IRouterFactory extends BaseContract {
   createRouter(
     router: string,
     recipient: string,
+    chainId: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -86,6 +89,7 @@ export interface IRouterFactory extends BaseContract {
     createRouter(
       router: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>;
   };
@@ -99,6 +103,7 @@ export interface IRouterFactory extends BaseContract {
     createRouter(
       router: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
   };
@@ -107,6 +112,7 @@ export interface IRouterFactory extends BaseContract {
     createRouter(
       router: string,
       recipient: string,
+      chainId: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
   };

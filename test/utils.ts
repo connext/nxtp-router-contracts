@@ -8,14 +8,11 @@ import {
   tidy,
   TransactionData,
 } from "@connext/nxtp-utils";
-import { arrayify, splitSignature, defaultAbiCoder, solidityKeccak256, keccak256 } from "ethers/lib/utils";
+import { arrayify, splitSignature, defaultAbiCoder, solidityKeccak256 } from "ethers/lib/utils";
 import { Wallet, BigNumber, constants, Contract, ContractFactory, ContractReceipt, Signer, providers } from "ethers";
 import { Artifact } from "hardhat/types";
 
 export const MAX_FEE_PER_GAS = BigNumber.from("975000000");
-const { AddressZero } = constants;
-const EmptyBytes = "0x";
-const EmptyCallDataHash = keccak256(EmptyBytes);
 
 export const deployContract = async <T extends Contract = Contract>(
   factoryInfo: string | Artifact,
@@ -270,15 +267,22 @@ export const signRouterCancelTransactionPayload = async (
 // Remove Liquidity
 const SignedRouterRemoveLiquidityDataEncoding = tidy(`tuple(
   uint256 amount,
-  address assetId
+  address assetId,
+  uint256 chainId,
+  address signer
 )`);
 
-const encodeRouterRemoveLiquidityData = (amount: string, assetId: string): string => {
-  return defaultAbiCoder.encode([SignedRouterRemoveLiquidityDataEncoding], [{ amount, assetId }]);
+const encodeRouterRemoveLiquidityData = (amount: string, assetId: string, chainId: number, signer: string): string => {
+  return defaultAbiCoder.encode([SignedRouterRemoveLiquidityDataEncoding], [{ amount, assetId, chainId, signer }]);
 };
 
-const getRouterRemoveLiquidityHashToSign = (amount: string, assetId: string): string => {
-  const payload = encodeRouterRemoveLiquidityData(amount, assetId);
+const getRouterRemoveLiquidityHashToSign = (
+  amount: string,
+  assetId: string,
+  chainId: number,
+  signer: string,
+): string => {
+  const payload = encodeRouterRemoveLiquidityData(amount, assetId, chainId, signer);
   const hash = solidityKeccak256(["bytes"], [payload]);
   return hash;
 };
@@ -286,9 +290,11 @@ const getRouterRemoveLiquidityHashToSign = (amount: string, assetId: string): st
 export const signRemoveLiquidityTransactionPayload = (
   amount: string,
   assetId: string,
+  chainId: number,
+  signerAddress: string,
   signer: Wallet | Signer,
 ): Promise<string> => {
-  const hash = getRouterRemoveLiquidityHashToSign(amount, assetId);
+  const hash = getRouterRemoveLiquidityHashToSign(amount, assetId, chainId, signerAddress);
 
   return sign(hash, signer);
 };

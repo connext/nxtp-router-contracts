@@ -18,8 +18,8 @@ contract RouterFactory is IRouterFactory, Ownable {
     transactionManager = ITransactionManager(_transactionManager);
   }
 
-  function createRouter(address signer, address recipient) override external returns (address) {
-    Router router = new Router(address(transactionManager), signer, recipient, msg.sender);
+  function createRouter(address signer, address recipient, uint256 chainId) override external returns (address) {
+    Router router = new Router(address(transactionManager), signer, recipient, msg.sender, chainId);
     emit RouterCreated(address(router));
     return address(router);
   }

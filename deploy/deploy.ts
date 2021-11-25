@@ -21,6 +21,7 @@ const func: DeployFunction = async ({
     from: deployer,
     args: [],
     log: true,
+    deterministicDeployment: true,
   });
 };
 export default func;
